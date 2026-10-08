@@ -1,0 +1,13 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "table": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "table"
+  ],
+  "type": "object"
+}

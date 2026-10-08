@@ -1,0 +1,37 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "default": "jsonl",
+      "enum": [
+        "csv",
+        "json",
+        "jsonl"
+      ],
+      "type": "string"
+    },
+    "include_header": {
+      "default": true,
+      "type": "boolean"
+    },
+    "local_path": {
+      "description": "New output file relative to local_root. Existing files are never replaced.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "local_root": {
+      "description": "Human-approved absolute output root; never returned.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "sql": {
+      "description": "Read-oriented SQL to export.",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "sql"
+  ],
+  "type": "object"
+}

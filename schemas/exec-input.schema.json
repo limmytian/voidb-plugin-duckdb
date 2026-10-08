@@ -1,0 +1,14 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "sql": {
+      "description": "SQL that may mutate SQLite schema or data.",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "sql"
+  ],
+  "type": "object"
+}

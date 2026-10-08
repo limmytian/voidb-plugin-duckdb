@@ -1,0 +1,19 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "analyze": {
+      "default": false,
+      "description": "Request runtime analyze. Built-in SQL plugins reject true by default to avoid side effects.",
+      "type": "boolean"
+    },
+    "sql": {
+      "description": "Read-oriented SQL statement to explain. Mutating statements and analyze execution are rejected by default.",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "sql"
+  ],
+  "type": "object"
+}

@@ -1,0 +1,14 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "sql": {
+      "description": "Read-oriented SQL. Mutating statements must use sqlite.exec.",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "sql"
+  ],
+  "type": "object"
+}
