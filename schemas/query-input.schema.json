@@ -2,7 +2,7 @@
   "additionalProperties": false,
   "properties": {
     "sql": {
-      "description": "Read-oriented SQL. Mutating statements must use sqlite.exec.",
+      "description": "Read-oriented DuckDB SQL. Mutating statements must use duckdb.exec.",
       "minLength": 1,
       "type": "string"
     }
