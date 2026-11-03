@@ -3,17 +3,18 @@ mod capabilities;
 mod cli_plugin;
 mod config;
 pub mod service;
+pub mod tui;
 
 use async_trait::async_trait;
 use duckdb::Connection;
 
 use voidb_core::connection::{ConnectionConfig, DatabaseType};
-use voidb_core::database::types::*;
 use voidb_core::database::DatabaseAdapter;
+use voidb_core::database::types::*;
 use voidb_core::error::VoidbError;
 
-pub use capabilities::{duckdb_capabilities, invoke_duckdb_capability};
 pub use agent_session::DuckDbAgentSessionFactory;
+pub use capabilities::{duckdb_capabilities, invoke_duckdb_capability};
 pub use cli_plugin::create_duckdb_cli_plugin;
 pub use config::DuckDbConfig;
 pub use service::{DuckDbCommand, DuckDbEvent, DuckDbService};
@@ -141,14 +142,15 @@ pub fn duckdb_list_indexes(conn: &Connection, table: &str) -> Vec<IndexInfo> {
         Ok(rows) => rows.filter_map(|r| r.ok()).collect::<Vec<_>>(),
         Err(_) => return Vec::new(),
     };
-    mapped.into_iter()
-    .map(|(name, unique, _sql)| IndexInfo {
-        name,
-        columns: Vec::new(),
-        unique,
-        index_type: "BTREE".to_string(),
-    })
-    .collect()
+    mapped
+        .into_iter()
+        .map(|(name, unique, _sql)| IndexInfo {
+            name,
+            columns: Vec::new(),
+            unique,
+            index_type: "BTREE".to_string(),
+        })
+        .collect()
 }
 
 pub fn duckdb_list_foreign_keys(conn: &Connection, table: &str) -> Vec<ForeignKeyInfo> {
@@ -166,15 +168,14 @@ pub fn duckdb_list_foreign_keys(conn: &Connection, table: &str) -> Vec<ForeignKe
         Ok(s) => s,
         Err(_) => return Vec::new(),
     };
-    let rows: Vec<(String, String, String, String)> = match stmt
-        .query_map([table], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, String>(3)?,
-            ))
-        }) {
+    let rows: Vec<(String, String, String, String)> = match stmt.query_map([table], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, String>(3)?,
+        ))
+    }) {
         Ok(mapped) => mapped.filter_map(|r| r.ok()).collect(),
         Err(_) => return Vec::new(),
     };
@@ -182,14 +183,16 @@ pub fn duckdb_list_foreign_keys(conn: &Connection, table: &str) -> Vec<ForeignKe
     let mut fk_map: std::collections::HashMap<String, ForeignKeyInfo> =
         std::collections::HashMap::new();
     for (name, col, ref_table, ref_col) in rows {
-        let entry = fk_map.entry(name.clone()).or_insert_with(|| ForeignKeyInfo {
-            name,
-            columns: Vec::new(),
-            referenced_table: ref_table,
-            referenced_columns: Vec::new(),
-            on_update: String::new(),
-            on_delete: String::new(),
-        });
+        let entry = fk_map
+            .entry(name.clone())
+            .or_insert_with(|| ForeignKeyInfo {
+                name,
+                columns: Vec::new(),
+                referenced_table: ref_table,
+                referenced_columns: Vec::new(),
+                on_update: String::new(),
+                on_delete: String::new(),
+            });
         entry.columns.push(col);
         entry.referenced_columns.push(ref_col);
     }

@@ -1,0 +1,1080 @@
+{
+  "profile_label": "fixture-duckdb-ops",
+  "server_label": "fixture-duckdb-local",
+  "connection_kind": "file",
+  "database_file": "operations.duckdb",
+  "status": "fixture duckdb operations ready",
+  "target_error": "target error: IO Error: Conflicting lock is held on the database file by another process (fixture)",
+  "error_tables": [
+    "locked_events"
+  ],
+  "error_message": "target error: IO Error: Conflicting lock is held on the database file while mutating locked_events (fixture)",
+  "tables": [
+    {
+      "name": "dim_customers",
+      "table_type": "table",
+      "rows": 6
+    },
+    {
+      "name": "empty_archive",
+      "table_type": "table",
+      "rows": 0
+    },
+    {
+      "name": "fact_sales",
+      "table_type": "table",
+      "rows": 3
+    },
+    {
+      "name": "keyvalue",
+      "table_type": "table",
+      "rows": 2
+    },
+    {
+      "name": "locked_events",
+      "table_type": "table",
+      "rows": 1
+    },
+    {
+      "name": "stg_events",
+      "table_type": "table",
+      "rows": 12
+    }
+  ],
+  "views": [
+    "v_daily_revenue"
+  ],
+  "table_data": {
+    "stg_events": {
+      "columns": [
+        {
+          "name": "event_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "event_type",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "customer_id",
+          "data_type": "BIGINT",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "occurred_at",
+          "data_type": "TIMESTAMP",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "payload",
+          "data_type": "JSON",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "notes",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "pks": [
+        "event_id"
+      ],
+      "rows": [
+        [
+          {
+            "Int": 1
+          },
+          {
+            "Text": "import_batch"
+          },
+          {
+            "Int": 101
+          },
+          {
+            "Text": "2026-11-02T03:01:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":1}"
+          },
+          {
+            "Null": null
+          }
+        ],
+        [
+          {
+            "Int": 2
+          },
+          {
+            "Text": "import_batch"
+          },
+          {
+            "Int": 102
+          },
+          {
+            "Text": "2026-11-01T03:02:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":2}"
+          },
+          {
+            "Null": null
+          }
+        ],
+        [
+          {
+            "Int": 3
+          },
+          {
+            "Text": "import_batch"
+          },
+          {
+            "Int": 100
+          },
+          {
+            "Text": "2026-11-02T03:03:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":3}"
+          },
+          {
+            "Null": null
+          }
+        ],
+        [
+          {
+            "Int": 4
+          },
+          {
+            "Text": "import_batch"
+          },
+          {
+            "Null": null
+          },
+          {
+            "Text": "2026-11-01T03:04:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":4}"
+          },
+          {
+            "Null": null
+          }
+        ],
+        [
+          {
+            "Int": 5
+          },
+          {
+            "Text": "import_batch"
+          },
+          {
+            "Int": 102
+          },
+          {
+            "Text": "2026-11-02T03:05:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":5}"
+          },
+          {
+            "Text": "duplicated by failed overnight import"
+          }
+        ],
+        [
+          {
+            "Int": 6
+          },
+          {
+            "Text": "import_batch"
+          },
+          {
+            "Int": 100
+          },
+          {
+            "Text": "2026-11-01T03:06:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":6}"
+          },
+          {
+            "Null": null
+          }
+        ],
+        [
+          {
+            "Int": 7
+          },
+          {
+            "Text": "import_batch"
+          },
+          {
+            "Int": 101
+          },
+          {
+            "Text": "2026-11-02T03:07:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":7}"
+          },
+          {
+            "Null": null
+          }
+        ],
+        [
+          {
+            "Int": 8
+          },
+          {
+            "Text": "import_batch"
+          },
+          {
+            "Null": null
+          },
+          {
+            "Text": "2026-11-01T03:08:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":8}"
+          },
+          {
+            "Null": null
+          }
+        ],
+        [
+          {
+            "Int": 9
+          },
+          {
+            "Text": "page_view"
+          },
+          {
+            "Int": 100
+          },
+          {
+            "Text": "2026-11-02T03:09:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":9}"
+          },
+          {
+            "Null": null
+          }
+        ],
+        [
+          {
+            "Int": 10
+          },
+          {
+            "Text": "page_view"
+          },
+          {
+            "Int": 101
+          },
+          {
+            "Text": "2026-11-01T03:10:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":10}"
+          },
+          {
+            "Text": "duplicated by failed overnight import"
+          }
+        ],
+        [
+          {
+            "Int": 11
+          },
+          {
+            "Text": "page_view"
+          },
+          {
+            "Int": 102
+          },
+          {
+            "Text": "2026-11-02T03:11:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":11}"
+          },
+          {
+            "Null": null
+          }
+        ],
+        [
+          {
+            "Int": 12
+          },
+          {
+            "Text": "page_view"
+          },
+          {
+            "Null": null
+          },
+          {
+            "Text": "2026-11-01T03:12:00"
+          },
+          {
+            "Text": "{\"batch\":\"nightly-2026-11-01\",\"seq\":12}"
+          },
+          {
+            "Null": null
+          }
+        ]
+      ]
+    },
+    "dim_customers": {
+      "columns": [
+        {
+          "name": "customer_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "name",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "segment",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "credit_limit",
+          "data_type": "DOUBLE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "active",
+          "data_type": "BOOLEAN",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "signed_up",
+          "data_type": "DATE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "pks": [
+        "customer_id"
+      ],
+      "rows": [
+        [
+          {
+            "Int": 100
+          },
+          {
+            "Text": "northwind-co"
+          },
+          {
+            "Text": "enterprise"
+          },
+          {
+            "Float": 12500.75
+          },
+          {
+            "Bool": true
+          },
+          {
+            "Text": "2026-01-15"
+          }
+        ],
+        [
+          {
+            "Int": 101
+          },
+          {
+            "Text": "acme-labs"
+          },
+          {
+            "Text": "mid_market"
+          },
+          {
+            "Float": 4800.0
+          },
+          {
+            "Bool": true
+          },
+          {
+            "Text": "2026-02-03"
+          }
+        ],
+        [
+          {
+            "Int": 102
+          },
+          {
+            "Text": "globex"
+          },
+          {
+            "Text": "strategic"
+          },
+          {
+            "Float": 96000.5
+          },
+          {
+            "Bool": true
+          },
+          {
+            "Text": "2026-03-21"
+          }
+        ],
+        [
+          {
+            "Int": 103
+          },
+          {
+            "Text": "initech"
+          },
+          {
+            "Text": "smb"
+          },
+          {
+            "Null": null
+          },
+          {
+            "Bool": false
+          },
+          {
+            "Text": "2026-04-08"
+          }
+        ],
+        [
+          {
+            "Int": 104
+          },
+          {
+            "Text": "umbrella-ops"
+          },
+          {
+            "Text": "mid_market"
+          },
+          {
+            "Float": 7250.25
+          },
+          {
+            "Bool": true
+          },
+          {
+            "Text": "2026-05-30"
+          }
+        ],
+        [
+          {
+            "Int": 105
+          },
+          {
+            "Text": "hooli-analytics"
+          },
+          {
+            "Text": "enterprise"
+          },
+          {
+            "Float": 50000.0
+          },
+          {
+            "Null": null
+          },
+          {
+            "Text": "2026-06-12"
+          }
+        ]
+      ]
+    },
+    "fact_sales": {
+      "columns": [
+        {
+          "name": "sale_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "region",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "amount",
+          "data_type": "DOUBLE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "quantity",
+          "data_type": "BIGINT",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "settled",
+          "data_type": "BOOLEAN",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "pks": [
+        "sale_id"
+      ],
+      "rows": [
+        [
+          {
+            "Int": 5001
+          },
+          {
+            "Text": "emea"
+          },
+          {
+            "Float": 1299.99
+          },
+          {
+            "Int": 3
+          },
+          {
+            "Bool": true
+          }
+        ],
+        [
+          {
+            "Int": 5002
+          },
+          {
+            "Text": "apac"
+          },
+          {
+            "Float": 240.5
+          },
+          {
+            "Int": 1
+          },
+          {
+            "Bool": false
+          }
+        ],
+        [
+          {
+            "Int": 5003
+          },
+          {
+            "Text": "amer"
+          },
+          {
+            "Float": 98.4
+          },
+          {
+            "Int": 2
+          },
+          {
+            "Bool": true
+          }
+        ]
+      ]
+    },
+    "keyvalue": {
+      "columns": [
+        {
+          "name": "k",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "v",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "pks": [],
+      "rows": [
+        [
+          {
+            "Text": "feature_flags"
+          },
+          {
+            "Text": "data_inspector_tui=pilot,telemetry=opt-in"
+          }
+        ],
+        [
+          {
+            "Text": "raw_payload"
+          },
+          {
+            "Blob": [
+              104,
+              101,
+              108,
+              108,
+              111
+            ]
+          }
+        ]
+      ]
+    },
+    "locked_events": {
+      "columns": [
+        {
+          "name": "event_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "note",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "pks": [
+        "event_id"
+      ],
+      "rows": [
+        [
+          {
+            "Int": 1
+          },
+          {
+            "Text": "row held while the writer process keeps the file lock"
+          }
+        ]
+      ]
+    },
+    "empty_archive": {
+      "columns": [
+        {
+          "name": "archive_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "archived_at",
+          "data_type": "TIMESTAMP",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "pks": [
+        "archive_id"
+      ],
+      "rows": []
+    },
+    "v_daily_revenue": {
+      "columns": [
+        {
+          "name": "day",
+          "data_type": "DATE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "revenue",
+          "data_type": "DOUBLE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "pks": [],
+      "rows": [
+        [
+          {
+            "Text": "2026-11-01"
+          },
+          {
+            "Float": 4120.5
+          }
+        ],
+        [
+          {
+            "Text": "2026-11-02"
+          },
+          {
+            "Float": 5310.25
+          }
+        ]
+      ]
+    }
+  },
+  "structures": {
+    "stg_events": {
+      "columns": [
+        {
+          "name": "event_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "event_type",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "customer_id",
+          "data_type": "BIGINT",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "occurred_at",
+          "data_type": "TIMESTAMP",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "payload",
+          "data_type": "JSON",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "notes",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "foreign_keys": [
+        {
+          "name": "fk_stg_events_customer",
+          "columns": [
+            "customer_id"
+          ],
+          "referenced_table": "dim_customers",
+          "referenced_columns": [
+            "customer_id"
+          ],
+          "on_update": "",
+          "on_delete": ""
+        }
+      ]
+    },
+    "dim_customers": {
+      "columns": [
+        {
+          "name": "customer_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "name",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "segment",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "credit_limit",
+          "data_type": "DOUBLE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "active",
+          "data_type": "BOOLEAN",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "signed_up",
+          "data_type": "DATE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "foreign_keys": []
+    },
+    "fact_sales": {
+      "columns": [
+        {
+          "name": "sale_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "region",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "amount",
+          "data_type": "DOUBLE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "quantity",
+          "data_type": "BIGINT",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "settled",
+          "data_type": "BOOLEAN",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_fact_sales_region",
+          "columns": [
+            "region"
+          ],
+          "unique": false,
+          "index_type": "ART"
+        }
+      ],
+      "foreign_keys": []
+    },
+    "keyvalue": {
+      "columns": [
+        {
+          "name": "k",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "v",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "foreign_keys": []
+    },
+    "locked_events": {
+      "columns": [
+        {
+          "name": "event_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "note",
+          "data_type": "VARCHAR",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "foreign_keys": []
+    },
+    "empty_archive": {
+      "columns": [
+        {
+          "name": "archive_id",
+          "data_type": "BIGINT",
+          "nullable": false,
+          "is_primary_key": true,
+          "default_value": null,
+          "max_length": null,
+          "extra": "PRIMARY KEY"
+        },
+        {
+          "name": "archived_at",
+          "data_type": "TIMESTAMP",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "foreign_keys": []
+    },
+    "v_daily_revenue": {
+      "columns": [
+        {
+          "name": "day",
+          "data_type": "DATE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        },
+        {
+          "name": "revenue",
+          "data_type": "DOUBLE",
+          "nullable": true,
+          "is_primary_key": false,
+          "default_value": null,
+          "max_length": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "foreign_keys": []
+    }
+  }
+}
