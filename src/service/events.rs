@@ -3,8 +3,8 @@
 //! Events are sent from the SyncWorker back to the TUI plugin.
 //! The TUI polls events via `DuckDbService::poll_event()`.
 
-use voidb_core::{ColumnInfo, Row};
 use voidb_core::database::types::ForeignKeyInfo;
+use voidb_core::{ColumnInfo, Row};
 
 /// Top-level event enum for the DuckDB service.
 #[derive(Debug)]
@@ -122,7 +122,9 @@ pub enum BrowserEvent {
     },
 
     /// Copy data ready for clipboard write (internal use by facade).
-    CopyDataReady { data: Vec<super::commands::TableCopyData> },
+    CopyDataReady {
+        data: Vec<super::commands::TableCopyData>,
+    },
 
     /// Copy operation completed.
     CopyDone,

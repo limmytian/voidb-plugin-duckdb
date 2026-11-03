@@ -3,8 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// DuckDB connection configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DuckDbConfig {
     /// Database file path (or ":memory:" for in-memory)
     pub path: String,
@@ -37,4 +36,3 @@ impl DuckDbConfig {
         }
     }
 }
-

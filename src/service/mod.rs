@@ -28,8 +28,8 @@ pub use events::{
 use std::sync::Arc;
 
 use tokio::sync::mpsc;
-use voidb_core::sync_worker::SyncWorker;
 use voidb_core::TabManager;
+use voidb_core::sync_worker::SyncWorker;
 
 use crate::config::DuckDbConfig;
 
@@ -114,15 +114,38 @@ enum BrowserResult {
 struct NoOpTabManager;
 
 impl TabManager for NoOpTabManager {
-    fn open(&self, _title: String, _plugin_id: String, _context: serde_json::Value) -> anyhow::Result<()> { Ok(()) }
-    fn close_current(&self) -> anyhow::Result<()> { Ok(()) }
-    fn close_tab(&self, _index: usize) -> anyhow::Result<()> { Ok(()) }
-    fn set_title(&self, _title: String) -> anyhow::Result<()> { Ok(()) }
-    fn request_render(&self) -> anyhow::Result<()> { Ok(()) }
-    fn list_tabs(&self) -> anyhow::Result<Vec<voidb_core::shell_capabilities::TabInfo>> { Ok(vec![]) }
-    fn switch_to(&self, _index: usize) -> anyhow::Result<()> { Ok(()) }
-    fn active_tab_index(&self) -> anyhow::Result<usize> { Ok(0) }
-    fn quit(&self) -> anyhow::Result<()> { Ok(()) }
+    fn open(
+        &self,
+        _title: String,
+        _plugin_id: String,
+        _context: serde_json::Value,
+    ) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn close_current(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn close_tab(&self, _index: usize) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn set_title(&self, _title: String) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn request_render(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn list_tabs(&self) -> anyhow::Result<Vec<voidb_core::shell_capabilities::TabInfo>> {
+        Ok(vec![])
+    }
+    fn switch_to(&self, _index: usize) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn active_tab_index(&self) -> anyhow::Result<usize> {
+        Ok(0)
+    }
+    fn quit(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 /// DuckDB service facade.
@@ -147,16 +170,11 @@ impl DuckDbService {
     ///
     /// Opens the DuckDB database on a dedicated worker thread.
     /// Returns an error if the database cannot be opened.
-    pub fn new(
-        config: DuckDbConfig,
-        tabs: Arc<dyn TabManager>,
-    ) -> Result<Self, String> {
+    pub fn new(config: DuckDbConfig, tabs: Arc<dyn TabManager>) -> Result<Self, String> {
         let (event_tx, event_rx) = mpsc::unbounded_channel::<DuckDbEvent>();
 
         let worker = SyncWorker::spawn(
-            move || {
-                crate::open_duckdb(&config)
-            },
+            move || crate::open_duckdb(&config),
             |conn, cmd: InternalCmd| {
                 let resp = match cmd {
                     InternalCmd::Schema(sc) => InternalResp::Schema(handle_schema_cmd(conn, sc)),
@@ -212,9 +230,7 @@ impl DuckDbService {
         let config_clone = config.clone();
 
         let worker = SyncWorker::spawn(
-            move || {
-                crate::open_duckdb(&config_clone)
-            },
+            move || crate::open_duckdb(&config_clone),
             |conn, cmd: InternalCmd| {
                 let resp = match cmd {
                     InternalCmd::Schema(sc) => InternalResp::Schema(handle_schema_cmd(conn, sc)),
@@ -255,11 +271,17 @@ impl DuckDbService {
     pub async fn describe_table(
         &mut self,
         table: &str,
-    ) -> anyhow::Result<(Vec<voidb_core::ColumnInfo>, Vec<IndexInfo>, Vec<voidb_core::database::types::ForeignKeyInfo>)> {
+    ) -> anyhow::Result<(
+        Vec<voidb_core::ColumnInfo>,
+        Vec<IndexInfo>,
+        Vec<voidb_core::database::types::ForeignKeyInfo>,
+    )> {
         self.worker
-            .send(InternalCmd::Schema(commands::SchemaCommand::LoadStructure {
-                table: table.to_string(),
-            }))
+            .send(InternalCmd::Schema(
+                commands::SchemaCommand::LoadStructure {
+                    table: table.to_string(),
+                },
+            ))
             .map_err(|_| anyhow::anyhow!("Worker channel closed"))?;
         match self.worker.recv().await {
             Some(InternalResp::Schema(SchemaResult::StructureLoaded {
@@ -275,14 +297,13 @@ impl DuckDbService {
     }
 
     /// Execute a SQL query (direct mode).
-    pub async fn execute_query(
-        &mut self,
-        sql: &str,
-    ) -> anyhow::Result<Vec<StatementResult>> {
+    pub async fn execute_query(&mut self, sql: &str) -> anyhow::Result<Vec<StatementResult>> {
         self.worker
-            .send(InternalCmd::Crud(commands::CrudCommand::ExecuteMultiQuery {
-                sql: sql.to_string(),
-            }))
+            .send(InternalCmd::Crud(
+                commands::CrudCommand::ExecuteMultiQuery {
+                    sql: sql.to_string(),
+                },
+            ))
             .map_err(|_| anyhow::anyhow!("Worker channel closed"))?;
         match self.worker.recv().await {
             Some(InternalResp::Crud(CrudResult::MultiQueryResult { results })) => Ok(results),
@@ -299,12 +320,10 @@ impl DuckDbService {
 
 fn handle_schema_cmd(conn: &mut duckdb::Connection, cmd: commands::SchemaCommand) -> SchemaResult {
     match cmd {
-        commands::SchemaCommand::ListTables => {
-            match schema::handle_list_tables(conn) {
-                Ok((tables, views)) => SchemaResult::TablesLoaded { tables, views },
-                Err(e) => SchemaResult::Error(e),
-            }
-        }
+        commands::SchemaCommand::ListTables => match schema::handle_list_tables(conn) {
+            Ok((tables, views)) => SchemaResult::TablesLoaded { tables, views },
+            Err(e) => SchemaResult::Error(e),
+        },
         commands::SchemaCommand::ShowCreateTable { table } => {
             match schema::handle_show_create_table(conn, &table) {
                 Ok(ddl) => SchemaResult::CreateTableDdl { table, ddl },
@@ -313,9 +332,12 @@ fn handle_schema_cmd(conn: &mut duckdb::Connection, cmd: commands::SchemaCommand
         }
         commands::SchemaCommand::LoadStructure { table } => {
             match schema::handle_load_structure(conn, &table) {
-                Ok((columns, indexes, foreign_keys)) => {
-                    SchemaResult::StructureLoaded { table, columns, indexes, foreign_keys }
-                }
+                Ok((columns, indexes, foreign_keys)) => SchemaResult::StructureLoaded {
+                    table,
+                    columns,
+                    indexes,
+                    foreign_keys,
+                },
                 Err(e) => SchemaResult::Error(e),
             }
         }
@@ -334,18 +356,36 @@ fn handle_crud_cmd(conn: &mut duckdb::Connection, cmd: commands::CrudCommand) ->
             let results = crud::handle_execute_multi_query(conn, &sql);
             CrudResult::MultiQueryResult { results }
         }
-        commands::CrudCommand::SaveChanges { table, columns, rows, pk_columns, pending, deleted } => {
-            match crud::handle_save_changes(conn, &table, &columns, &rows, &pk_columns, &pending, &deleted) {
+        commands::CrudCommand::SaveChanges {
+            table,
+            columns,
+            rows,
+            pk_columns,
+            pending,
+            deleted,
+        } => {
+            match crud::handle_save_changes(
+                conn,
+                &table,
+                &columns,
+                &rows,
+                &pk_columns,
+                &pending,
+                &deleted,
+            ) {
                 Ok((updates, deletes)) => CrudResult::ChangesSaved { updates, deletes },
                 Err(e) => CrudResult::Error(e),
             }
         }
-        commands::CrudCommand::PasteRows { table, columns, data_rows, mode } => {
-            match crud::handle_paste_rows(conn, &table, &columns, &data_rows, &mode) {
-                Ok(inserted) => CrudResult::PasteComplete { inserted },
-                Err(e) => CrudResult::Error(e),
-            }
-        }
+        commands::CrudCommand::PasteRows {
+            table,
+            columns,
+            data_rows,
+            mode,
+        } => match crud::handle_paste_rows(conn, &table, &columns, &data_rows, &mode) {
+            Ok(inserted) => CrudResult::PasteComplete { inserted },
+            Err(e) => CrudResult::Error(e),
+        },
         commands::CrudCommand::ImportCsv { table, sql_batch } => {
             match crud::handle_import_csv(conn, &table, &sql_batch) {
                 Ok(()) => CrudResult::ImportComplete,
@@ -357,14 +397,20 @@ fn handle_crud_cmd(conn: &mut duckdb::Connection, cmd: commands::CrudCommand) ->
 
 fn handle_load_cmd(conn: &mut duckdb::Connection, cmd: commands::LoadCommand) -> LoadResult {
     match cmd {
-        commands::LoadCommand::LoadTableData { table, page_size, offset } => {
-            match data_loader::handle_load_table_data(conn, &table, page_size, offset) {
-                Ok((pks, columns, rows, total)) => {
-                    LoadResult::TableDataLoaded { table, pks, columns, rows, total }
-                }
-                Err(e) => LoadResult::Error(e),
-            }
-        }
+        commands::LoadCommand::LoadTableData {
+            table,
+            page_size,
+            offset,
+        } => match data_loader::handle_load_table_data(conn, &table, page_size, offset) {
+            Ok((pks, columns, rows, total)) => LoadResult::TableDataLoaded {
+                table,
+                pks,
+                columns,
+                rows,
+                total,
+            },
+            Err(e) => LoadResult::Error(e),
+        },
         commands::LoadCommand::LoadRowCount { table } => {
             match data_loader::handle_load_row_count(conn, &table) {
                 Ok(count) => LoadResult::RowCountLoaded { table, count },
@@ -380,7 +426,10 @@ fn handle_load_cmd(conn: &mut duckdb::Connection, cmd: commands::LoadCommand) ->
     }
 }
 
-fn handle_browser_cmd(conn: &mut duckdb::Connection, cmd: commands::BrowserCommand) -> BrowserResult {
+fn handle_browser_cmd(
+    conn: &mut duckdb::Connection,
+    cmd: commands::BrowserCommand,
+) -> BrowserResult {
     // CopyTables needs special handling: return data via BrowserResult::CopyData
     if let commands::BrowserCommand::CopyTables { ref tables } = cmd {
         return match browser::collect_copy_data(conn, tables) {
@@ -407,11 +456,17 @@ fn translate_response(resp: InternalResp) -> DuckDbEvent {
             SchemaResult::CreateTableDdl { table, ddl } => {
                 DuckDbEvent::Schema(events::SchemaEvent::CreateTableDdl { table, ddl })
             }
-            SchemaResult::StructureLoaded { table, columns, indexes, foreign_keys } => {
-                DuckDbEvent::Schema(events::SchemaEvent::StructureLoaded {
-                    table, columns, indexes, foreign_keys,
-                })
-            }
+            SchemaResult::StructureLoaded {
+                table,
+                columns,
+                indexes,
+                foreign_keys,
+            } => DuckDbEvent::Schema(events::SchemaEvent::StructureLoaded {
+                table,
+                columns,
+                indexes,
+                foreign_keys,
+            }),
             SchemaResult::Error(e) => DuckDbEvent::Error(e),
         },
         InternalResp::Crud(cr) => match cr {
@@ -431,11 +486,19 @@ fn translate_response(resp: InternalResp) -> DuckDbEvent {
             CrudResult::Error(e) => DuckDbEvent::Error(e),
         },
         InternalResp::Load(lr) => match lr {
-            LoadResult::TableDataLoaded { table, pks, columns, rows, total } => {
-                DuckDbEvent::Load(events::LoadEvent::TableDataLoaded {
-                    table, pks, columns, rows, total,
-                })
-            }
+            LoadResult::TableDataLoaded {
+                table,
+                pks,
+                columns,
+                rows,
+                total,
+            } => DuckDbEvent::Load(events::LoadEvent::TableDataLoaded {
+                table,
+                pks,
+                columns,
+                rows,
+                total,
+            }),
             LoadResult::RowCountLoaded { table, count } => {
                 DuckDbEvent::Load(events::LoadEvent::RowCountLoaded { table, count })
             }
@@ -446,7 +509,9 @@ fn translate_response(resp: InternalResp) -> DuckDbEvent {
         },
         InternalResp::Browser(br) => match br {
             BrowserResult::Event(event) => DuckDbEvent::Browser(event),
-            BrowserResult::CopyData(data) => DuckDbEvent::Browser(events::BrowserEvent::CopyDataReady { data }),
+            BrowserResult::CopyData(data) => {
+                DuckDbEvent::Browser(events::BrowserEvent::CopyDataReady { data })
+            }
             BrowserResult::Error(e) => DuckDbEvent::Error(e),
         },
     }
@@ -493,24 +558,44 @@ mod tests {
     struct MockTabManager;
 
     impl TabManager for MockTabManager {
-        fn open(&self, _title: String, _plugin_id: String, _context: serde_json::Value) -> Result<()> { Ok(()) }
-        fn close_current(&self) -> Result<()> { Ok(()) }
-        fn close_tab(&self, _index: usize) -> Result<()> { Ok(()) }
-        fn set_title(&self, _title: String) -> Result<()> { Ok(()) }
-        fn request_render(&self) -> Result<()> { Ok(()) }
-        fn list_tabs(&self) -> Result<Vec<TabInfo>> { Ok(vec![]) }
-        fn switch_to(&self, _index: usize) -> Result<()> { Ok(()) }
-        fn active_tab_index(&self) -> Result<usize> { Ok(0) }
-        fn quit(&self) -> Result<()> { Ok(()) }
+        fn open(
+            &self,
+            _title: String,
+            _plugin_id: String,
+            _context: serde_json::Value,
+        ) -> Result<()> {
+            Ok(())
+        }
+        fn close_current(&self) -> Result<()> {
+            Ok(())
+        }
+        fn close_tab(&self, _index: usize) -> Result<()> {
+            Ok(())
+        }
+        fn set_title(&self, _title: String) -> Result<()> {
+            Ok(())
+        }
+        fn request_render(&self) -> Result<()> {
+            Ok(())
+        }
+        fn list_tabs(&self) -> Result<Vec<TabInfo>> {
+            Ok(vec![])
+        }
+        fn switch_to(&self, _index: usize) -> Result<()> {
+            Ok(())
+        }
+        fn active_tab_index(&self) -> Result<usize> {
+            Ok(0)
+        }
+        fn quit(&self) -> Result<()> {
+            Ok(())
+        }
     }
 
     fn create_test_service() -> DuckDbService {
         let tabs: Arc<dyn TabManager> = Arc::new(MockTabManager);
-        DuckDbService::new(
-            DuckDbConfig::new(":memory:".into()),
-            tabs,
-        )
-        .expect("Failed to create in-memory DuckDbService")
+        DuckDbService::new(DuckDbConfig::new(":memory:".into()), tabs)
+            .expect("Failed to create in-memory DuckDbService")
     }
 
     #[tokio::test]
@@ -533,7 +618,10 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         let event = svc.poll_event();
-        assert!(matches!(event, Some(DuckDbEvent::Schema(SchemaEvent::TablesLoaded { .. }))));
+        assert!(matches!(
+            event,
+            Some(DuckDbEvent::Schema(SchemaEvent::TablesLoaded { .. }))
+        ));
     }
 
     #[tokio::test]
@@ -562,7 +650,9 @@ mod tests {
 
         let event = svc.poll_event();
         match event {
-            Some(DuckDbEvent::Load(LoadEvent::TableDataLoaded { table, rows, total, .. })) => {
+            Some(DuckDbEvent::Load(LoadEvent::TableDataLoaded {
+                table, rows, total, ..
+            })) => {
                 assert_eq!(table, "t");
                 assert_eq!(rows.len(), 1);
                 assert_eq!(total, 1);
@@ -611,10 +701,28 @@ mod tests {
         use voidb_core::{CellValue, ColumnInfo, Row};
 
         let columns = vec![
-            ColumnInfo { name: "id".into(), data_type: "INTEGER".into(), nullable: false, is_primary_key: true, default_value: None, max_length: None, extra: String::new() },
-            ColumnInfo { name: "name".into(), data_type: "VARCHAR".into(), nullable: true, is_primary_key: false, default_value: None, max_length: None, extra: String::new() },
+            ColumnInfo {
+                name: "id".into(),
+                data_type: "INTEGER".into(),
+                nullable: false,
+                is_primary_key: true,
+                default_value: None,
+                max_length: None,
+                extra: String::new(),
+            },
+            ColumnInfo {
+                name: "name".into(),
+                data_type: "VARCHAR".into(),
+                nullable: true,
+                is_primary_key: false,
+                default_value: None,
+                max_length: None,
+                extra: String::new(),
+            },
         ];
-        let rows = vec![Row { values: vec![CellValue::Int(1), CellValue::Text("alice".into())] }];
+        let rows = vec![Row {
+            values: vec![CellValue::Int(1), CellValue::Text("alice".into())],
+        }];
         let mut pending = HashMap::new();
         pending.insert((0, 1), CellValue::Text("bob".into()));
 

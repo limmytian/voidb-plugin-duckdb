@@ -9,7 +9,9 @@ use voidb_core::{CellValue, ColumnInfo, Row};
 
 use super::commands::PasteMode;
 use super::events::StatementResult;
-use super::value_convert::{build_pk_where, decode_duckdb_value, extract_columns, quote_duckdb_value};
+use super::value_convert::{
+    build_pk_where, decode_duckdb_value, extract_columns, quote_duckdb_value,
+};
 
 /// Execute a single SQL query and return columns + rows.
 ///
@@ -17,7 +19,10 @@ use super::value_convert::{build_pk_where, decode_duckdb_value, extract_columns,
 /// uses `execute()` and returns empty columns/rows.
 /// For SELECT/VALUES, uses `query_map()` and extracts columns after execution
 /// (DuckDB requires statement execution before column_name() is accessible).
-pub fn handle_execute_query(conn: &Connection, sql: &str) -> Result<(Vec<ColumnInfo>, Vec<Row>), String> {
+pub fn handle_execute_query(
+    conn: &Connection,
+    sql: &str,
+) -> Result<(Vec<ColumnInfo>, Vec<Row>), String> {
     let upper = sql.trim_start().to_uppercase();
     let is_select = upper.starts_with("SELECT")
         || upper.starts_with("EXPLAIN")
@@ -32,9 +37,7 @@ pub fn handle_execute_query(conn: &Connection, sql: &str) -> Result<(Vec<ColumnI
         return Ok((Vec::new(), Vec::new()));
     }
 
-    let mut stmt = conn
-        .prepare(sql)
-        .map_err(|e| format!("Prepare: {}", e))?;
+    let mut stmt = conn.prepare(sql).map_err(|e| format!("Prepare: {}", e))?;
 
     // DuckDB panics on column_count()/column_name() before execution.
     // query_map() executes the statement; after collect() the mutable
@@ -138,10 +141,9 @@ pub fn handle_save_changes(
             continue;
         }
         let row_values = &rows[*row_idx].values;
-        let where_clause = build_pk_where(pk_columns, row_values, columns)
-            .inspect_err(|_| {
-                let _ = conn.execute_batch("ROLLBACK");
-            })?;
+        let where_clause = build_pk_where(pk_columns, row_values, columns).inspect_err(|_| {
+            let _ = conn.execute_batch("ROLLBACK");
+        })?;
 
         let set_parts: Vec<String> = edits
             .iter()
@@ -172,10 +174,9 @@ pub fn handle_save_changes(
     let mut delete_count = 0;
     for &row_idx in deleted {
         let row_values = &rows[row_idx].values;
-        let where_clause = build_pk_where(pk_columns, row_values, columns)
-            .inspect_err(|_| {
-                let _ = conn.execute_batch("ROLLBACK");
-            })?;
+        let where_clause = build_pk_where(pk_columns, row_values, columns).inspect_err(|_| {
+            let _ = conn.execute_batch("ROLLBACK");
+        })?;
         let sql = format!("DELETE FROM {} WHERE {}", qtable, where_clause);
         conn.execute(&sql, []).map_err(|e| {
             let _ = conn.execute_batch("ROLLBACK");

@@ -12,10 +12,7 @@ use super::events::{BrowserEvent, TableMeta};
 use super::value_convert::{decode_duckdb_value, quote_duckdb_value};
 
 /// Handle a browser command. Returns an event or error string.
-pub fn handle_browser(
-    conn: &Connection,
-    cmd: BrowserCommand,
-) -> Result<BrowserEvent, String> {
+pub fn handle_browser(conn: &Connection, cmd: BrowserCommand) -> Result<BrowserEvent, String> {
     match cmd {
         BrowserCommand::LoadTables => handle_load_tables(conn),
         BrowserCommand::LoadPreview { table } => handle_load_preview(conn, &table),
@@ -79,7 +76,9 @@ pub fn handle_load_preview(conn: &Connection, table: &str) -> Result<BrowserEven
 
     // Get row count
     let row_count: u64 = conn
-        .query_row(&format!("SELECT COUNT(*) FROM {}", quoted), [], |r| r.get(0))
+        .query_row(&format!("SELECT COUNT(*) FROM {}", quoted), [], |r| {
+            r.get(0)
+        })
         .map_err(|e| format!("Count failed: {}", e))?;
 
     // Get first 50 rows
@@ -118,10 +117,7 @@ pub fn handle_load_preview(conn: &Connection, table: &str) -> Result<BrowserEven
 }
 
 /// Copy table structures and data for clipboard operations.
-pub fn handle_copy_tables(
-    _conn: &Connection,
-    _tables: &[String],
-) -> Result<BrowserEvent, String> {
+pub fn handle_copy_tables(_conn: &Connection, _tables: &[String]) -> Result<BrowserEvent, String> {
     // Copy data collection is handled via collect_copy_data called from mod.rs.
     // This returns CopyDone; the facade handles the rest.
     Ok(BrowserEvent::CopyDone)
@@ -218,7 +214,11 @@ pub fn handle_paste_tables(
 
 /// Execute raw SQL in the browser context.
 pub fn handle_execute_sql(conn: &Connection, sql: &str) -> Result<BrowserEvent, String> {
-    let stmts: Vec<&str> = sql.split(';').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+    let stmts: Vec<&str> = sql
+        .split(';')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
     for stmt in &stmts {
         conn.execute_batch(stmt)
             .map_err(|e| format!("Failed: {}", e))?;

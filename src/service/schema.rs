@@ -13,12 +13,14 @@ use super::events::IndexInfo;
 type StructureResult = (Vec<ColumnInfo>, Vec<IndexInfo>, Vec<ForeignKeyInfo>);
 
 /// List all tables and views in the database.
-pub fn handle_list_tables(conn: &Connection) -> Result<(Vec<super::events::TableMeta>, Vec<String>), String> {
+pub fn handle_list_tables(
+    conn: &Connection,
+) -> Result<(Vec<super::events::TableMeta>, Vec<String>), String> {
     let mut stmt = conn
         .prepare(
             "SELECT table_name, table_type FROM information_schema.tables \
              WHERE table_schema = 'main' \
-             ORDER BY table_name"
+             ORDER BY table_name",
         )
         .map_err(|e| format!("list_tables: {}", e))?;
 
@@ -62,10 +64,7 @@ pub fn handle_show_create_table(conn: &Connection, table: &str) -> Result<String
 }
 
 /// Load full structure info (columns + indexes + foreign keys).
-pub fn handle_load_structure(
-    conn: &Connection,
-    table: &str,
-) -> Result<StructureResult, String> {
+pub fn handle_load_structure(conn: &Connection, table: &str) -> Result<StructureResult, String> {
     let schema = crate::duckdb_describe_table(conn, table)?;
 
     let indexes: Vec<IndexInfo> = crate::duckdb_list_indexes(conn, table)

@@ -97,7 +97,9 @@ pub fn build_pk_where(
 pub fn extract_columns(stmt: &duckdb::Statement) -> Vec<ColumnInfo> {
     (0..stmt.column_count())
         .map(|i| ColumnInfo {
-            name: stmt.column_name(i).map_or("?".to_string(), |v| v.to_string()),
+            name: stmt
+                .column_name(i)
+                .map_or("?".to_string(), |v| v.to_string()),
             data_type: String::new(),
             nullable: true,
             is_primary_key: false,
