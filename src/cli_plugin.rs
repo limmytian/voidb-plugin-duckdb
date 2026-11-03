@@ -1,12 +1,19 @@
+use std::fs;
+
 use async_trait::async_trait;
-use clap::{Arg, ArgMatches, Command};
+use chrono::Utc;
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use voidb_core::database::types::QueryResult;
 use voidb_core::formatters::{cell_value_to_csv, cell_value_to_json, print_table};
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
-use voidb_core::VoidbError;
+use voidb_core::{ConnectionProfileRef, TuiLaunchRequest, VoidbError, build_tui_launch_plan};
 
 use crate::config::DuckDbConfig;
 use crate::service::{DuckDbService, StatementResult};
+use crate::tui::{
+    DuckDbTuiLaunch, DuckDbTuiSource, build_duckdb_tui_evidence, run_duckdb_tui,
+    write_duckdb_tui_preflight,
+};
 
 pub struct DuckDbCliPlugin;
 
@@ -84,6 +91,59 @@ impl CliPlugin for DuckDbCliPlugin {
                         .action(clap::ArgAction::SetTrue)
                         .help("Read connection configuration JSON from stdin"),
                 ),
+            Command::new("tui")
+                .about("Launch the standalone DuckDB data-inspector TUI (pilot)")
+                .arg(
+                    Arg::new("profile")
+                        .long("profile")
+                        .value_name("PROFILE")
+                        .conflicts_with("connection")
+                        .help("Profile name, id:<id>, or name:<name>"),
+                )
+                .arg(
+                    Arg::new("connection")
+                        .short('c')
+                        .long("connection")
+                        .value_name("CONNECTION")
+                        .conflicts_with("profile")
+                        .help("Legacy connection name"),
+                )
+                .arg(
+                    Arg::new("fixture").long("fixture").value_name("PATH").help(
+                        "Load deterministic DuckDB TUI fixture JSON instead of opening a file",
+                    ),
+                )
+                .arg(
+                    Arg::new("purpose")
+                        .long("purpose")
+                        .value_name("PURPOSE")
+                        .default_value("operations")
+                        .help("Launch purpose, for example operations or triage"),
+                )
+                .arg(
+                    Arg::new("readonly")
+                        .long("readonly")
+                        .action(ArgAction::SetTrue)
+                        .help("Stage operation plans but block mutating service commands"),
+                )
+                .arg(
+                    Arg::new("no-restore")
+                        .long("no-restore")
+                        .action(ArgAction::SetTrue)
+                        .help("Start without restoring plugin-owned UI state"),
+                )
+                .arg(
+                    Arg::new("format")
+                        .long("format")
+                        .value_parser(["json"])
+                        .help("Emit secret-free preflight JSON and exit"),
+                )
+                .arg(
+                    Arg::new("evidence")
+                        .long("evidence")
+                        .value_name("PATH")
+                        .help("Write fixture-backed standalone DuckDB TUI evidence JSON and exit"),
+                ),
         ]
     }
 
@@ -103,6 +163,7 @@ impl CliPlugin for DuckDbCliPlugin {
             "extensions" => self.handle_extensions(matches, ctx).await,
             "install-ext" => self.handle_install_ext(matches, ctx).await,
             "test" => self.handle_test(matches, ctx).await,
+            "tui" => self.handle_tui(matches, ctx).await,
             _ => Err(VoidbError::Plugin(format!("Unknown command: {}", command))),
         }
     }
@@ -141,16 +202,135 @@ impl DuckDbCliPlugin {
         .map_err(|e| VoidbError::Config(e.to_string()))
     }
 
-    fn create_service(&self, conn_name: &str, ctx: &CliContext) -> Result<DuckDbService, VoidbError> {
+    fn create_service(
+        &self,
+        conn_name: &str,
+        ctx: &CliContext,
+    ) -> Result<DuckDbService, VoidbError> {
         let duckdb_config = self.parse_config(conn_name, ctx)?;
         DuckDbService::new_direct(&duckdb_config).map_err(VoidbError::Connection)
     }
 
-    async fn handle_query(
+    fn parse_tui_launch(
         &self,
         matches: &ArgMatches,
         ctx: &CliContext,
-    ) -> Result<(), VoidbError> {
+    ) -> Result<DuckDbTuiLaunch, VoidbError> {
+        let fixture_path = matches.get_one::<String>("fixture").cloned();
+        let purpose = matches
+            .get_one::<String>("purpose")
+            .cloned()
+            .unwrap_or_else(|| "operations".to_string());
+        let readonly = matches.get_flag("readonly");
+        let restore = !matches.get_flag("no-restore");
+
+        if let Some(profile_ref) = matches.get_one::<String>("profile") {
+            let (profile, connection) =
+                ctx.resolve_profile_connection(profile_ref, Some("duckdb"))?;
+            let config: DuckDbConfig = connection
+                .plugin_config
+                .as_ref()
+                .ok_or_else(|| VoidbError::Connection("Missing plugin_config".to_string()))
+                .and_then(|pc| {
+                    serde_json::from_value(pc.clone()).map_err(|e| {
+                        VoidbError::Connection(format!("Invalid DuckDB config: {}", e))
+                    })
+                })?;
+            let profile_arg = profile_ref_arg(profile_ref, &profile.id);
+            let request = TuiLaunchRequest::new("duckdb", profile_arg, purpose.clone())
+                .readonly(readonly)
+                .restore(restore)
+                .raw_input(false);
+            let launch_plan = build_tui_launch_plan(&profile, request, "voidb-cli", Utc::now())?;
+
+            return Ok(DuckDbTuiLaunch {
+                profile_label: profile.name,
+                config: Some(config),
+                source: DuckDbTuiSource::Profile,
+                fixture_path,
+                purpose,
+                readonly,
+                restore,
+                launch_plan: Some(launch_plan),
+            });
+        }
+
+        if let Some(conn_name) = matches.get_one::<String>("connection") {
+            let config = self.parse_config(conn_name, ctx)?;
+            return Ok(DuckDbTuiLaunch {
+                profile_label: conn_name.clone(),
+                config: Some(config),
+                source: DuckDbTuiSource::Connection,
+                fixture_path,
+                purpose,
+                readonly,
+                restore,
+                launch_plan: None,
+            });
+        }
+
+        if fixture_path.is_some() {
+            return Ok(DuckDbTuiLaunch {
+                profile_label: "fixture".to_string(),
+                config: None,
+                source: DuckDbTuiSource::Fixture,
+                fixture_path,
+                purpose,
+                readonly,
+                restore,
+                launch_plan: None,
+            });
+        }
+
+        Err(VoidbError::Plugin(
+            "duckdb tui requires --profile, --connection, or --fixture".to_string(),
+        ))
+    }
+
+    async fn handle_tui(&self, matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbError> {
+        let launch = self.parse_tui_launch(matches, ctx)?;
+        if let Some(path) = matches.get_one::<String>("evidence") {
+            let evidence = build_duckdb_tui_evidence(&launch)
+                .map_err(|e| VoidbError::Plugin(format!("DuckDB TUI evidence failed: {}", e)))?;
+            let rendered = serde_json::to_string_pretty(&evidence).map_err(|e| {
+                VoidbError::Plugin(format!("DuckDB TUI evidence serialization failed: {}", e))
+            })?;
+            if let Some(parent) = std::path::Path::new(path).parent()
+                && !parent.as_os_str().is_empty()
+            {
+                fs::create_dir_all(parent).map_err(|e| {
+                    VoidbError::Plugin(format!(
+                        "Failed to create DuckDB TUI evidence directory '{}': {}",
+                        parent.display(),
+                        e
+                    ))
+                })?;
+            }
+            fs::write(path, rendered).map_err(|e| {
+                VoidbError::Plugin(format!(
+                    "Failed to write DuckDB TUI evidence '{}': {}",
+                    path, e
+                ))
+            })?;
+            println!("Wrote DuckDB TUI evidence to {path}");
+            return Ok(());
+        }
+
+        if matches
+            .get_one::<String>("format")
+            .is_some_and(|format| format == "json")
+        {
+            write_duckdb_tui_preflight(&launch)
+                .map_err(|e| VoidbError::Plugin(format!("DuckDB TUI preflight failed: {}", e)))?;
+            return Ok(());
+        }
+
+        run_duckdb_tui(launch)
+            .await
+            .map_err(|e| VoidbError::Plugin(format!("DuckDB TUI failed: {}", e)))
+    }
+
+    async fn handle_query(&self, matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbError> {
         let conn_name = matches.get_one::<String>("connection").unwrap();
         let sql = matches.get_one::<String>("sql").unwrap();
         let format = matches
@@ -253,9 +433,21 @@ impl DuckDbCliPlugin {
         for stmt_result in &results {
             if let StatementResult::Select { rows, .. } = stmt_result {
                 for row in rows {
-                    let schema = row.values.first().map(|v| voidb_core::formatters::cell_value_to_display(v).to_string()).unwrap_or_default();
-                    let name = row.values.get(1).map(|v| voidb_core::formatters::cell_value_to_display(v).to_string()).unwrap_or_default();
-                    let table_type = row.values.get(2).map(|v| voidb_core::formatters::cell_value_to_display(v).to_string()).unwrap_or_default();
+                    let schema = row
+                        .values
+                        .first()
+                        .map(|v| voidb_core::formatters::cell_value_to_display(v).to_string())
+                        .unwrap_or_default();
+                    let name = row
+                        .values
+                        .get(1)
+                        .map(|v| voidb_core::formatters::cell_value_to_display(v).to_string())
+                        .unwrap_or_default();
+                    let table_type = row
+                        .values
+                        .get(2)
+                        .map(|v| voidb_core::formatters::cell_value_to_display(v).to_string())
+                        .unwrap_or_default();
                     println!("{:<20} {:<40} {:<15}", schema, name, table_type);
                 }
             }
@@ -298,7 +490,11 @@ impl DuckDbCliPlugin {
                 println!(
                     "  {} [{}]",
                     idx.name,
-                    if idx.unique { "UNIQUE" } else { &idx.index_type },
+                    if idx.unique {
+                        "UNIQUE"
+                    } else {
+                        &idx.index_type
+                    },
                 );
             }
         }
@@ -327,7 +523,9 @@ impl DuckDbCliPlugin {
         let conn_name = matches.get_one::<String>("connection").unwrap();
         let mut service = self.create_service(conn_name, ctx)?;
         let results = service
-            .execute_query("SELECT schema_name FROM information_schema.schemata ORDER BY schema_name")
+            .execute_query(
+                "SELECT schema_name FROM information_schema.schemata ORDER BY schema_name",
+            )
             .await
             .map_err(|e| VoidbError::Query(e.to_string()))?;
 
@@ -336,7 +534,11 @@ impl DuckDbCliPlugin {
         for stmt_result in &results {
             if let StatementResult::Select { rows, .. } = stmt_result {
                 for row in rows {
-                    let name = row.values.first().map(voidb_core::formatters::cell_value_to_display).unwrap_or_default();
+                    let name = row
+                        .values
+                        .first()
+                        .map(voidb_core::formatters::cell_value_to_display)
+                        .unwrap_or_default();
                     println!("{}", name);
                 }
             }
@@ -370,13 +572,20 @@ impl DuckDbCliPlugin {
             .await
             .map_err(|e| VoidbError::Query(e.to_string()))?;
 
-        let count = count_results.first().and_then(|r| {
-            if let StatementResult::Select { rows, .. } = r {
-                rows.first().and_then(|row| row.values.first().map(voidb_core::formatters::cell_value_to_display))
-            } else {
-                None
-            }
-        }).unwrap_or_else(|| "?".to_string());
+        let count = count_results
+            .first()
+            .and_then(|r| {
+                if let StatementResult::Select { rows, .. } = r {
+                    rows.first().and_then(|row| {
+                        row.values
+                            .first()
+                            .map(voidb_core::formatters::cell_value_to_display)
+                    })
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| "?".to_string());
 
         println!("Imported {} rows into '{}'", count, table);
         Ok(())
@@ -428,9 +637,21 @@ impl DuckDbCliPlugin {
         for stmt_result in &results {
             if let StatementResult::Select { rows, .. } = stmt_result {
                 for row in rows {
-                    let name = row.values.first().map(voidb_core::formatters::cell_value_to_display).unwrap_or_default();
-                    let installed = row.values.get(1).map(voidb_core::formatters::cell_value_to_display).unwrap_or_default();
-                    let path = row.values.get(2).map(voidb_core::formatters::cell_value_to_display).unwrap_or_default();
+                    let name = row
+                        .values
+                        .first()
+                        .map(voidb_core::formatters::cell_value_to_display)
+                        .unwrap_or_default();
+                    let installed = row
+                        .values
+                        .get(1)
+                        .map(voidb_core::formatters::cell_value_to_display)
+                        .unwrap_or_default();
+                    let path = row
+                        .values
+                        .get(2)
+                        .map(voidb_core::formatters::cell_value_to_display)
+                        .unwrap_or_default();
                     println!("{:<30} {:<10} {}", name, installed, path);
                 }
             }
@@ -456,11 +677,7 @@ impl DuckDbCliPlugin {
         Ok(())
     }
 
-    async fn handle_test(
-        &self,
-        matches: &ArgMatches,
-        ctx: &CliContext,
-    ) -> Result<(), VoidbError> {
+    async fn handle_test(&self, matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbError> {
         let duckdb_config = if matches.get_flag("stdin-config") {
             use std::io::Read;
             let mut input = String::new();
@@ -491,5 +708,20 @@ impl DuckDbCliPlugin {
                 Err(VoidbError::Connection(e))
             }
         }
+    }
+}
+
+fn profile_ref_arg(input: &str, profile_id: &str) -> ConnectionProfileRef {
+    if let Some(id) = input.strip_prefix("id:") {
+        ConnectionProfileRef::Id(id.to_string())
+    } else if let Some(name) = input
+        .strip_prefix("name:")
+        .or_else(|| input.strip_prefix("alias:"))
+    {
+        ConnectionProfileRef::Name(name.to_string())
+    } else if input == profile_id {
+        ConnectionProfileRef::Id(input.to_string())
+    } else {
+        ConnectionProfileRef::Name(input.to_string())
     }
 }
