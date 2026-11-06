@@ -16,15 +16,15 @@ Independent process plugin for [VoidB](https://github.com/limmytian/voidb) to co
 
 ```bash
 # Connectivity test
-voidb-cli duckdb test --profile my-duckdb
+vb duckdb test --profile my-duckdb
 
 # Run analytical SQL queries and schema inspection
-voidb-cli duckdb tables --profile my-duckdb
-voidb-cli duckdb describe analytics --profile my-duckdb
-voidb-cli duckdb query "SELECT * FROM analytics LIMIT 10;" --profile my-duckdb
+vb duckdb tables --profile my-duckdb
+vb duckdb describe analytics --profile my-duckdb
+vb duckdb query "SELECT * FROM analytics LIMIT 10;" --profile my-duckdb
 
 # Machine / Agent stdio-jsonrpc server
-voidb-cli duckdb serve
+vb duckdb serve
 ```
 
 ## Optional local SDK development
